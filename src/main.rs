@@ -6,6 +6,7 @@ use std::hash::Hash;
 use lexer::Rule;
 
 pub mod lexer;
+
 fn main() {
     let contents = fs::read_to_string("test.adoc").expect("Something went wrong reading the file");
     let lexer = lexer::AsciiDocParser::parse(Rule::document, &contents)

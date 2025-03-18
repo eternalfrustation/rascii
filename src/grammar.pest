@@ -12,7 +12,17 @@ author = {word ~ (" " ~ word)? ~ (" " ~ word)? ~ (" " ~ email)?}
 
 authors = {author ~ (" "? ~ ";" ~ " "? ~ author)*}
 
-document_header = {"=" ~ " " ~ line ~ NEWLINE ~ authors?}
+version = { NUMBER+ ~ ( "." ~ version)? }
+
+revision_number = { "v"? ~ version }
+
+date = {NUMBER{4} ~ "-" ~ NUMBER{2} ~ "-" ~ NUMBER{2}}
+
+remark = {": " ~ line}
+
+revision_line = {revision_number ~ (" "? ~ "," ~ " "? ~ date)? ~ (" "? ~ remark)?}
+
+document_header = {"=" ~ " " ~ line ~ NEWLINE ~ (authors ~ NEWLINE ~ revision_line?)?}
 
 /// The grammar for matching document
 document = { SOI ~ ( document_header )? ~ ANY* ~ EOI}
