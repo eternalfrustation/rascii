@@ -1,0 +1,18 @@
+//! A parser for AsciiDoc files
+
+line = { (!NEWLINE ~ ANY)* }
+
+heading = {"="{,6} ~ " " ~ line}
+
+word = {( LETTER | NUMBER )*}
+
+email = {"<" ~ (!(SEPARATOR | ">") ~ ANY)* ~ ">"}
+
+author = {word ~ (" " ~ word)? ~ (" " ~ word)? ~ (" " ~ email)?}
+
+authors = {author ~ (" "? ~ ";" ~ " "? ~ author)*}
+
+document_header = {"=" ~ " " ~ line ~ NEWLINE ~ authors?}
+
+/// The grammar for matching document
+document = { SOI ~ ( document_header )? ~ ANY* ~ EOI}
