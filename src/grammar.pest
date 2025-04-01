@@ -1,28 +1,34 @@
 //! A parser for AsciiDoc files
 
-line = { (!NEWLINE ~ ANY)* }
+line = { ((!NEWLINE ~ ANY)+) ~ NEWLINE }
 
-heading = {"="{,6} ~ " " ~ line}
+heading = { "="{,6} ~ " " ~ line }
 
-word = {( LETTER | NUMBER )*}
+word = { (LETTER | NUMBER | SEPARATOR)* }
 
-email = {"<" ~ (!(SEPARATOR | ">") ~ ANY)* ~ ">"}
+email = { "<" ~ (!(SEPARATOR | ">") ~ ANY)* ~ ">" }
 
-author = {word ~ (" " ~ word)? ~ (" " ~ word)? ~ (" " ~ email)?}
+author = { word ~ (" " ~ word)? ~ (" " ~ word)? ~ (" " ~ email)? }
 
-authors = {author ~ (" "? ~ ";" ~ " "? ~ author)*}
+authors = { author ~ (" "? ~ ";" ~ " "? ~ author)* }
 
-version = { NUMBER+ ~ ( "." ~ version)? }
+version = { NUMBER+ ~ ("." ~ version)? }
 
 revision_number = { "v"? ~ version }
 
-date = {NUMBER{4} ~ "-" ~ NUMBER{2} ~ "-" ~ NUMBER{2}}
+date = { NUMBER{4} ~ "-" ~ NUMBER{2} ~ "-" ~ NUMBER{2} }
 
-remark = {": " ~ line}
+remark = { ": " ~ line }
 
-revision_line = {revision_number ~ (" "? ~ "," ~ " "? ~ date)? ~ (" "? ~ remark)?}
+revision_line = {
+    revision_number ~ (" "? ~ "," ~ " "? ~ date)? ~ (" "? ~ remark)?
+}
 
-document_header = {"=" ~ " " ~ line ~ NEWLINE ~ (authors ~ NEWLINE ~ revision_line?)?}
+document_header = { "=" ~ " " ~ line ~ (authors ~ NEWLINE? ~ revision_line?)? }
+
+paragraph_block = { line* }
+
+document_content = { (NEWLINE ~ paragraph_block)* }
 
 /// The grammar for matching document
-document = { SOI ~ ( document_header )? ~ ANY* ~ EOI}
+document = { SOI ~ (document_header)? ~ document_content ~ EOI }

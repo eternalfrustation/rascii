@@ -13,10 +13,10 @@ fn main() {
         .expect("unsuccessful parse")
         .next()
         .unwrap();
-    print_pair(lexer, 5);
+    print_pair(lexer, 6, 6);
 }
 
-fn print_pair<R>(pair: Pair<R>, level: u8)
+fn print_pair<R>(pair: Pair<R>, level: u8, max_level: u8)
 where
     R: Copy,
     R: Debug,
@@ -27,10 +27,16 @@ where
     if level < 1 {
         return;
     }
-    println!("Rule:    {:?}", pair.as_rule());
-    println!("Span:    {:?}", pair.as_span());
-    println!("Text:    {}", pair.as_str());
+    let indentation = String::from("  ").repeat((max_level - level) as usize);
+    let rule = pair.as_rule();
+    println!("{indentation}Rule:    {:?}", rule);
+    let rule_str = format!("{:?}", rule);
+
+    if rule_str.contains("line") || rule_str.contains("word") {
+        println!("{indentation}Span:    {:?}", pair.as_span());
+    }
+    
     for inner_pair in pair.into_inner() {
-        print_pair(inner_pair, level - 1);
+        print_pair(inner_pair, level - 1, max_level);
     }
 }
