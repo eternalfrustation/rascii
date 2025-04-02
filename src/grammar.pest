@@ -1,5 +1,3 @@
-//! A parser for AsciiDoc files
-
 line = { ((!NEWLINE ~ ANY)+) ~ NEWLINE }
 
 heading = { "="{,6} ~ " " ~ line }
@@ -26,9 +24,18 @@ revision_line = {
 
 document_header = { "=" ~ " " ~ line ~ (authors ~ NEWLINE? ~ revision_line?)? }
 
-paragraph_block = { line* }
+block_title = { "." ~ line }
 
-document_content = { (NEWLINE ~ paragraph_block)* }
+undelimited_block = { block_title? ~ line* }
 
-/// The grammar for matching document
+delimited_block_characters = { (("=" | "/" | "-" | "." | "*" | "+" | "_"){4, }) | "-"{2} }
+
+delimited_block = {
+    block_title? ~ PUSH(delimited_block_characters) ~ NEWLINE ~ (!delimited_block_characters ~ line)* ~ POP
+}
+
+block = { delimited_block | undelimited_block }
+
+document_content = { (NEWLINE ~ block)* }
+
 document = { SOI ~ (document_header)? ~ document_content ~ EOI }

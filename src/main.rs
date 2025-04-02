@@ -32,10 +32,15 @@ where
     println!("{indentation}Rule:    {:?}", rule);
     let rule_str = format!("{:?}", rule);
 
-    if rule_str.contains("line") || rule_str.contains("word") {
+    if rule_str.contains("line")
+        || rule_str.contains("word")
+        || rule_str.contains("number")
+        || rule_str.contains("date")
+        || rule_str.contains("delimited_block_characters")
+    {
         println!("{indentation}Span:    {:?}", pair.as_span());
     }
-    
+
     for inner_pair in pair.into_inner() {
         print_pair(inner_pair, level - 1, max_level);
     }
