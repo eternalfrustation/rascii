@@ -13,7 +13,7 @@ fn main() {
         .expect("unsuccessful parse")
         .next()
         .unwrap();
-    print_pair(lexer, 6, 6);
+    print_pair(lexer, 10, 10);
 }
 
 fn print_pair<R>(pair: Pair<R>, level: u8, max_level: u8)
@@ -39,6 +39,7 @@ where
         || rule_str.contains("delimited_block_characters")
         || rule_str.contains("attribute_entry_key")
         || rule_str.contains("attribute_entry_value")
+        || rule_str.contains("block_content")
     {
         println!("{indentation}Span:    {:?}", pair.as_span());
     }

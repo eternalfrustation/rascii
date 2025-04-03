@@ -33,20 +33,22 @@ attribute_entry = {
     ((attribute_entry_key ~ "=" ~ attribute_entry_value) | attribute_entry_value) ~ ","?
 }
 
-block_attribute_list = { "[" ~ attribute_entry* ~ "]" }
+block_attribute_list = { "[" ~ attribute_entry* ~ "]" ~ NEWLINE }
 
-undelimited_block = { line* }
+undelimited_block_content = {(!NEWLINE ~ (delimited_block | line))+}
+
+undelimited_block = { NEWLINE+ ~ block_title? ~ block_attribute_list? ~ undelimited_block_content }
 
 delimited_block_characters = { (("=" | "/" | "-" | "." | "*" | "+" | "_"){4, }) | "-"{2} }
 
+
 delimited_block = {
-    PUSH(delimited_block_characters) ~ NEWLINE ~ block_content ~ POP
+    NEWLINE* ~ block_title? ~ block_attribute_list? ~ PUSH(delimited_block_characters) ~ NEWLINE ~(!(PEEK ~ NEWLINE ) ~ (NEWLINE | block | line))+ ~ POP ~ NEWLINE*
 }
 
-block = { block_title? ~ block_attribute_list? ~ (delimited_block | undelimited_block) }
+block = { delimited_block | undelimited_block }
 
-block_content = { (block ~ ANY)* }
 
-document_content = { (NEWLINE ~ block)* }
+document_content = { (block)* }
 
 document = { SOI ~ (document_header)? ~ document_content ~ EOI }
