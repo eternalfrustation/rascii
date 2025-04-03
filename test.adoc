@@ -9,7 +9,9 @@ This should be inside the paragraph block
 .Block Title 2
 ====
 Hello, This is a multiline example block.
+=====
 This is the second line.
+=====
 This is the third line.
 All these lines should appear in a single Text node.
 ====

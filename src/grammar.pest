@@ -26,15 +26,26 @@ document_header = { "=" ~ " " ~ line ~ (authors ~ NEWLINE? ~ revision_line?)? }
 
 block_title = { "." ~ line }
 
-undelimited_block = { block_title? ~ line* }
+attribute_entry_key   = { (!("=" | "]") ~ ANY)+ }
+attribute_entry_value = { (!("," | "]") ~ ANY)+ }
+
+attribute_entry = {
+    ((attribute_entry_key ~ "=" ~ attribute_entry_value) | attribute_entry_value) ~ ","?
+}
+
+block_attribute_list = { "[" ~ attribute_entry* ~ "]" }
+
+undelimited_block = { line* }
 
 delimited_block_characters = { (("=" | "/" | "-" | "." | "*" | "+" | "_"){4, }) | "-"{2} }
 
 delimited_block = {
-    block_title? ~ PUSH(delimited_block_characters) ~ NEWLINE ~ (!delimited_block_characters ~ line)* ~ POP
+    PUSH(delimited_block_characters) ~ NEWLINE ~ block_content ~ POP
 }
 
-block = { delimited_block | undelimited_block }
+block = { block_title? ~ block_attribute_list? ~ (delimited_block | undelimited_block) }
+
+block_content = { (block ~ ANY)* }
 
 document_content = { (NEWLINE ~ block)* }
 
