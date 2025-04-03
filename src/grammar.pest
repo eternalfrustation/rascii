@@ -26,8 +26,8 @@ document_header = { "=" ~ " " ~ line ~ (authors ~ NEWLINE? ~ revision_line?)? }
 
 block_title = { "." ~ line }
 
-attribute_entry_key   = { (!("=" | "]") ~ ANY)+ }
-attribute_entry_value = { (!("," | "]") ~ ANY)+ }
+attribute_entry_key   = { (!("=" | "]" | ",") ~ ANY)+ }
+attribute_entry_value = { PUSH("\"") ~ (!"\"" ~ ANY)* ~ POP | (!("," | "]") ~ ANY)+ }
 
 attribute_entry = {
     ((attribute_entry_key ~ "=" ~ attribute_entry_value) | attribute_entry_value) ~ ","?

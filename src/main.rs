@@ -37,6 +37,8 @@ where
         || rule_str.contains("number")
         || rule_str.contains("date")
         || rule_str.contains("delimited_block_characters")
+        || rule_str.contains("attribute_entry_key")
+        || rule_str.contains("attribute_entry_value")
     {
         println!("{indentation}Span:    {:?}", pair.as_span());
     }

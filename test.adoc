@@ -3,6 +3,7 @@ Sandy Kmr1; KBS
 v9.1, 2021-09-01: Initial Parsing Test
 
 . Block Title 1
+[listing,a="sdlfj,kjwdfh"]
 This is going to be a paragraph
 This should be inside the paragraph block
 
