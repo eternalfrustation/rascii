@@ -39,9 +39,9 @@ where
         || rule_str.contains("delimited_block_characters")
         || rule_str.contains("attribute_entry_key")
         || rule_str.contains("attribute_entry_value")
-        || rule_str.contains("block_content")
     {
         println!("{indentation}Span:    {:?}", pair.as_span());
+        return;
     }
 
     for inner_pair in pair.into_inner() {

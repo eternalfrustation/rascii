@@ -41,14 +41,14 @@ undelimited_block = { NEWLINE+ ~ block_title? ~ block_attribute_list? ~ undelimi
 
 delimited_block_characters = { (("=" | "/" | "-" | "." | "*" | "+" | "_"){4, }) | "-"{2} }
 
-
 delimited_block = {
     NEWLINE* ~ block_title? ~ block_attribute_list? ~ PUSH(delimited_block_characters) ~ NEWLINE ~(!(PEEK ~ NEWLINE ) ~ (NEWLINE | block | line))+ ~ POP ~ NEWLINE*
 }
 
 block = { delimited_block | undelimited_block }
 
+section = { NEWLINE* ~ heading ~ (!heading ~ (block | line))* }
 
-document_content = { (block)* }
+document_content = { (section | block)* }
 
 document = { SOI ~ (document_header)? ~ document_content ~ EOI }
