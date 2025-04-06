@@ -31,11 +31,15 @@ pub struct DocumentContent<'a> {
 
 pub struct Block<'a> {
     pub title: &'a str,
-    pub attributes: Vec<Attributes>,
+    pub attributes: Vec<Attribute<'a>>,
     pub content: BlockContent<'a>,
 }
 
-pub enum Attributes {}
+// TODO: Make this an enum
+pub struct Attribute<'a> {
+    pub key: &'a str,
+    pub value: &'a str,
+}
 
 pub enum BlockContent<'a> {
     List(Vec<ListContent<'a>>),
@@ -44,28 +48,32 @@ pub enum BlockContent<'a> {
     Undelimited(Vec<UndelimitedBlockContent<'a>>),
 }
 
-enum ListContent<'a> {
-    UnorderedList {
-        text: &'a str,
-        sublist: Vec<ListContent<'a>>,
-    },
-    OrderedList {
-        text: &'a str,
-        sublist: Vec<ListContent<'a>>,
-    },
+pub enum ListContent<'a> {
+    UnorderedList(UnorderedListContent<'a>),
+    OrderedList(OrderedListContent<'a>),
 }
 
-enum SectionContent<'a> {
+pub struct UnorderedListContent<'a> {
+    pub text: &'a str,
+    pub sublist: Vec<ListContent<'a>>,
+}
+
+pub struct OrderedListContent<'a> {
+    pub text: &'a str,
+    pub sublist: Vec<ListContent<'a>>,
+}
+
+pub enum SectionContent<'a> {
     Text(&'a str),
     Block(Block<'a>),
 }
 
-enum DelimitedBlockContent<'a> {
+pub enum DelimitedBlockContent<'a> {
     Text(&'a str),
     Block(Block<'a>),
 }
 
-enum UndelimitedBlockContent<'a> {
+pub enum UndelimitedBlockContent<'a> {
     Text(&'a str),
     Block(Block<'a>),
 }

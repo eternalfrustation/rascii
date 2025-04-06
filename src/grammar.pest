@@ -56,6 +56,7 @@ attribute_entry = {
 
 block_attribute_list = { "[" ~ attribute_entry* ~ "]" ~ NEWLINE }
 
+
 undelimited_block_content = { (!NEWLINE ~ (list_block | delimited_block | line))+ }
 
 undelimited_block = { NEWLINE+ ~ block_title? ~ block_attribute_list? ~ undelimited_block_content }
