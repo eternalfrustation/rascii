@@ -2,11 +2,32 @@ line = { ((!NEWLINE ~ ANY)+) ~ NEWLINE }
 
 heading = { "="{,6} ~ " " ~ line }
 
-word = { (LETTER | NUMBER | SEPARATOR)* }
+word = { (LETTER | NUMBER | CONNECTOR_PUNCTUATION | "-")* }
 
-email = { "<" ~ (!(SEPARATOR | ">") ~ ANY)* ~ ">" }
+email = { word ~ "@" ~ word }
 
-author = { word ~ (" " ~ word)? ~ (" " ~ word)? ~ (" " ~ email)? }
+protocol = { "http" | "https" }
+
+host = { (!"." ~ (LETTER | NUMBER))* }
+
+domain_name = { (!"/" ~ (LETTER | NUMBER))+ }
+
+path = { (LETTER | NUMBER | "/" | "." | "%")* }
+
+hostname = { (host ~ ".")? ~ (domain_name) }
+
+query_value = { (!("&" | NEWLINE) ~ ANY)+ }
+
+query_key = { (!("=" | "&" | NEWLINE) ~ ANY)+ }
+
+query_param = { query_key ~ "=" ~ query_value }
+
+anchor = { word }
+
+/// Is Incomplete, need rule for query and anchor
+url = { protocol ~ "://" ~ hostname ~ ("/" ~ path)? ~ ("?" ~ query_param*)? ~ ("#" ~ anchor)? }
+
+author = { word ~ (" " ~ word)? ~ (" " ~ word)? ~ (" " ~ "<" ~ (email | url) ~ ">")? }
 
 authors = { author ~ (" "? ~ ";" ~ " "? ~ author)* }
 
@@ -24,7 +45,7 @@ revision_line = {
 
 document_header = { "=" ~ " " ~ line ~ (authors ~ NEWLINE? ~ revision_line?)? }
 
-block_title = { "." ~ line }
+block_title = { "." ~ !WHITE_SPACE ~ line }
 
 attribute_entry_key   = { (!("=" | "]" | ",") ~ ANY)+ }
 attribute_entry_value = { PUSH("\"") ~ (!"\"" ~ ANY)* ~ POP | (!("," | "]") ~ ANY)+ }
@@ -35,20 +56,30 @@ attribute_entry = {
 
 block_attribute_list = { "[" ~ attribute_entry* ~ "]" ~ NEWLINE }
 
-undelimited_block_content = {(!NEWLINE ~ (delimited_block | line))+}
+undelimited_block_content = { (!NEWLINE ~ (list_block | delimited_block | line))+ }
 
 undelimited_block = { NEWLINE+ ~ block_title? ~ block_attribute_list? ~ undelimited_block_content }
 
 delimited_block_characters = { (("=" | "/" | "-" | "." | "*" | "+" | "_"){4, }) | "-"{2} }
 
 delimited_block = {
-    NEWLINE* ~ block_title? ~ block_attribute_list? ~ PUSH(delimited_block_characters) ~ NEWLINE ~(!(PEEK ~ NEWLINE ) ~ (NEWLINE | block | line))+ ~ POP ~ NEWLINE*
+    NEWLINE* ~ block_title? ~ block_attribute_list? ~ PUSH(delimited_block_characters) ~ NEWLINE ~ (!(PEEK ~ NEWLINE) ~ (NEWLINE | block | line))+ ~ POP ~ NEWLINE*
 }
 
-block = { delimited_block | undelimited_block }
+unordered_list_identifier = { ("*" | "+")+ }
+
+ordered_list_identifier = { ("." | ((NUMBER | LETTER) ~ "."))+ }
+
+list_item = { WHITE_SPACE* ~ ((unordered_list_identifier | ordered_list_identifier) ~ WHITE_SPACE+) ~ line }
+
+// Deal with the nested lists when converting to AST, Would prefer to to that here, but can't figure out how
+list_block = { NEWLINE* ~ block_title? ~ block_attribute_list? ~ list_item+ }
+
+block = { list_block | delimited_block | undelimited_block }
 
 section = { NEWLINE* ~ heading ~ (!heading ~ (block | line))* }
 
 document_content = { (section | block)* }
 
+/// Rule for the entire document, this is the entry point
 document = { SOI ~ (document_header)? ~ document_content ~ EOI }
