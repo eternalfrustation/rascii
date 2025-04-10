@@ -118,11 +118,22 @@ fn parse_line<'a>(input: &'a str) -> IResult<&'a str, &'a str> {
 }
 
 fn parse_document_content<'a>(input: &'a str) -> IResult<&'a str, DocumentContent<'a>> {
-    let (input, blocks) = separated_list0(space0, parse_block).parse(input)?;
+    let (input, blocks) = separated_list0(
+        space0,
+        parse_block((
+            map(parse_list_content, BlockContent::List),
+            map(parse_section_content, BlockContent::Section),
+            map(parse_delimited_block_content, BlockContent::Delimited),
+            map(parse_undelimited_block_content, BlockContent::Undelimited),
+        )),
+    )
+    .parse(input)?;
     Ok((input, DocumentContent { blocks }))
 }
 
-fn parse_block<'a>(input: &'a str) -> IResult<&'a str, Block<'a>> {
+fn parse_block<'a>(
+    whitelist: (impl Fn(&'a str) -> IResult<&'a str, BlockContent<'a>>),
+) -> impl Fn(&'a str) -> IResult<&'a str, Block<'a>> {
     let (input, title) = parse_block_title(input)?;
 
     let (input, attributes) = parse_attribute_list(input)?;
@@ -162,25 +173,19 @@ fn parse_attribute<'a>(input: &'a str) -> IResult<&'a str, Attribute<'a>> {
     Ok((input, Attribute { key, value }))
 }
 
-fn parse_block_content<'a>(input: &'a str) -> IResult<&'a str, BlockContent<'a>> {
-    alt((
-        map(parse_list_content, BlockContent::List),
-        map(parse_section_content, BlockContent::Section),
-        map(parse_delimited_block_content, BlockContent::Delimited),
-        map(parse_undelimited_block_content, BlockContent::Undelimited),
-    ))
-    .parse(input)
+fn parse_block_content<'a>(
+    whitelist: (impl Fn(&'a str) -> IResult<&'a str, BlockContent<'a>>,),
+) -> impl Fn(&'a str) -> IResult<&'a str, BlockContent<'a>> {
+    |input: &'a str| alt(whitelist).parse(input)
 }
 
 fn parse_list_content<'a>(input: &'a str) -> IResult<&'a str, Vec<ListContent<'a>>> {
-
     todo!()
 }
 
 fn parse_ordered_list<'a>(input: &'a str) -> IResult<&'a str, Vec<ListContent<'a>>> {
     todo!()
 }
-
 
 fn parse_section_content<'a>(input: &'a str) -> IResult<&'a str, Vec<SectionContent<'a>>> {
     todo!()
@@ -195,5 +200,9 @@ fn parse_delimited_block_content<'a>(
 fn parse_undelimited_block_content<'a>(
     input: &'a str,
 ) -> IResult<&'a str, Vec<UndelimitedBlockContent<'a>>> {
-    todo!()
+    map(alt((
+        map(parse_list_content, BlockContent::List),
+        map(parse_section_content, BlockContent::Section),
+        map(parse_delimited_block_content, BlockContent::Delimited),
+    )))
 }
