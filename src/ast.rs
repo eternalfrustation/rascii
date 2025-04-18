@@ -1,79 +1,93 @@
 use chrono::NaiveDate;
 use http::Uri;
 
-pub struct Document<'a> {
-    pub header: Option<DocumentHeader<'a>>,
-    pub content: DocumentContent<'a>,
+#[derive(Debug, Clone)]
+pub struct Document {
+    pub header: Option<DocumentHeader>,
+    pub content: DocumentContent,
 }
 
-pub struct DocumentHeader<'a> {
-    pub title: Option<&'a str>,
-    pub authors: Vec<Author<'a>>,
-    pub revision: Revision<'a>,
+#[derive(Debug, Clone)]
+pub struct DocumentHeader {
+    pub title: Option<String>,
+    pub authors: Vec<Author>,
+    pub revision: Revision,
 }
 
-pub struct Author<'a> {
-    pub first_name: &'a str,
-    pub middle_name: Option<&'a str>,
-    pub last_name: Option<&'a str>,
+#[derive(Debug, Clone)]
+pub struct Author {
+    pub first_name: String,
+    pub middle_name: Option<String>,
+    pub last_name: Option<String>,
     pub email: Option<Uri>,
 }
 
-pub struct Revision<'a> {
-    pub version: Vec<&'a str>,
+#[derive(Debug, Clone)]
+pub struct Revision {
+    pub version: Vec<isize>,
     pub date: Option<NaiveDate>,
-    pub remark: &'a str,
+    pub remark: String,
 }
 
-pub struct DocumentContent<'a> {
-    pub blocks: Vec<Block<'a>>,
+#[derive(Debug, Clone)]
+pub struct DocumentContent {
+    pub blocks: Vec<Block>,
 }
 
-pub struct Block<'a> {
-    pub title: &'a str,
-    pub attributes: Vec<Attribute<'a>>,
-    pub content: BlockContent<'a>,
+#[derive(Debug, Clone)]
+pub struct Block {
+    pub title: String,
+    pub attributes: Vec<Attribute>,
+    pub content: BlockContent,
 }
 
+#[derive(Debug, Clone)]
 // TODO: Make this an enum
-pub struct Attribute<'a> {
-    pub key: &'a str,
-    pub value: &'a str,
+pub struct Attribute {
+    pub key: String,
+    pub value: String,
 }
 
-pub enum BlockContent<'a> {
-    List(Vec<ListContent<'a>>),
-    Section(Vec<SectionContent<'a>>),
-    Delimited(Vec<DelimitedBlockContent<'a>>),
-    Undelimited(Vec<UndelimitedBlockContent<'a>>),
+#[derive(Debug, Clone)]
+pub enum BlockContent {
+    List(Vec<ListContent>),
+    Section(Vec<SectionContent>),
+    Delimited(Vec<DelimitedBlockContent>),
+    Undelimited(Vec<UndelimitedBlockContent>),
 }
 
-pub enum ListContent<'a> {
-    UnorderedList(UnorderedListContent<'a>),
-    OrderedList(OrderedListContent<'a>),
+#[derive(Debug, Clone)]
+pub enum ListContent {
+    UnorderedList(UnorderedListContent),
+    OrderedList(OrderedListContent),
 }
 
-pub struct UnorderedListContent<'a> {
-    pub text: &'a str,
-    pub sublist: Vec<ListContent<'a>>,
+#[derive(Debug, Clone)]
+pub struct UnorderedListContent {
+    pub text: String,
+    pub sublist: Vec<ListContent>,
+}
+#[derive(Debug, Clone)]
+
+pub struct OrderedListContent {
+    pub text: String,
+    pub sublist: Vec<ListContent>,
+}
+#[derive(Debug, Clone)]
+
+pub enum SectionContent {
+    Text(String),
+    Block(Block),
+}
+#[derive(Debug, Clone)]
+
+pub enum DelimitedBlockContent {
+    Text(String),
+    Block(Block),
 }
 
-pub struct OrderedListContent<'a> {
-    pub text: &'a str,
-    pub sublist: Vec<ListContent<'a>>,
-}
-
-pub enum SectionContent<'a> {
-    Text(&'a str),
-    Block(Block<'a>),
-}
-
-pub enum DelimitedBlockContent<'a> {
-    Text(&'a str),
-    Block(Block<'a>),
-}
-
-pub enum UndelimitedBlockContent<'a> {
-    Text(&'a str),
-    Block(Block<'a>),
+#[derive(Debug, Clone)]
+pub enum UndelimitedBlockContent {
+    Text(String),
+    Block(Block),
 }

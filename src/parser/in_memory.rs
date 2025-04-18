@@ -30,116 +30,29 @@ fn parse_document<'a>(input: &'a str) -> IResult<&'a str, Document<'a>> {
     Ok((input, Document { header, content }))
 }
 
-fn parse_document_header<'a>(input: &'a str) -> IResult<&'a str, DocumentHeader<'a>> {
-    let (input, heading) = opt(preceded((many0(newline), tag("= ")), parse_line)).parse(input)?;
-    let (input, authors) = parse_authors(input)?;
-    let (input, revision) = parse_revision_line(input)?;
-    Ok((
-        input,
-        DocumentHeader {
-            title: heading,
-            authors,
-            revision,
-        },
-    ))
-}
-
-fn parse_revision_line<'a>(input: &'a str) -> IResult<&'a str, Revision<'a>> {
-    let (input, version) = parse_revision_number(input)?;
-    let (input, date) = preceded((space0, tag(","), space0), parse_date).parse(input)?;
-    let (input, remark) = preceded(tag(": "), is_not("\r\n")).parse(input)?;
-    Ok((
-        input,
-        Revision {
-            version,
-            date,
-            remark,
-        },
-    ))
-}
-
-fn parse_date<'a>(input: &'a str) -> IResult<&'a str, Option<chrono::NaiveDate>> {
-    let (input, (year, _, month, _, day)) = (
-        map_res(take(4u8), |i| i32::from_str_radix(i, 10)),
-        tag("-"),
-        map_res(take(2u8), |i| u32::from_str_radix(i, 10)),
-        tag("-"),
-        map_res(take(2u8), |i| u32::from_str_radix(i, 10)),
-    )
-        .parse(input)?;
-
-    Ok((input, chrono::NaiveDate::from_ymd_opt(year, month, day)))
-}
-
-fn parse_revision_number<'a>(input: &'a str) -> IResult<&'a str, Vec<&'a str>> {
-    preceded(opt(tag("v")), parse_version).parse(input)
-}
-fn parse_version<'a>(input: &'a str) -> IResult<&'a str, Vec<&'a str>> {
-    separated_list1(tag("."), decimal).parse(input)
-}
-fn decimal<'a>(input: &'a str) -> IResult<&'a str, &'a str> {
-    recognize(many1(terminated(alphanumeric1, many0(tag("_"))))).parse(input)
-}
-
-fn parse_authors<'a>(input: &'a str) -> IResult<&'a str, Vec<Author<'a>>> {
-    separated_list1(tag(";"), parse_author).parse(input)
-}
-
-fn parse_author<'a>(input: &'a str) -> IResult<&'a str, Author<'a>> {
-    let (input, (first_name, middle_name, last_name, email)) = (
-        alphanumeric1,
-        opt(preceded(tag(" "), alphanumeric1)),
-        opt(preceded(tag(" "), alphanumeric1)),
-        opt(preceded(tag(" "), delimited(tag("<"), parse_url, tag(">")))),
-    )
-        .parse(input)?;
-
-    Ok((
-        input,
-        Author {
-            first_name,
-            middle_name,
-            last_name,
-            email,
-        },
-    ))
-}
-
-fn parse_url<'a>(input: &'a str) -> IResult<&'a str, Uri> {
-    map_res(
-        alphanumeric1.or(is_a("-._~:/?#[]@!$&'()*+,;=%")),
-        |i: &str| i.parse(),
-    )
-    .parse(input)
-}
-
-fn parse_line<'a>(input: &'a str) -> IResult<&'a str, &'a str> {
-    is_not("\r\n").parse(input)
-}
 
 fn parse_document_content<'a>(input: &'a str) -> IResult<&'a str, DocumentContent<'a>> {
-    let (input, blocks) = separated_list0(
-        space0,
-        parse_block((
-            map(parse_list_content, BlockContent::List),
-            map(parse_section_content, BlockContent::Section),
-            map(parse_delimited_block_content, BlockContent::Delimited),
-            map(parse_undelimited_block_content, BlockContent::Undelimited),
-        )),
-    )
-    .parse(input)?;
+    let (input, blocks) = separated_list0(space0, parse_block).parse(input)?;
     Ok((input, DocumentContent { blocks }))
 }
 
-fn parse_block<'a>(
-    whitelist: (impl Fn(&'a str) -> IResult<&'a str, BlockContent<'a>>),
-) -> impl Fn(&'a str) -> IResult<&'a str, Block<'a>> {
+fn parse_block_header<'a>(input: &'a str) -> IResult<&'a str, (&'a str, Vec<Attribute<'a>>)> {
     let (input, title) = parse_block_title(input)?;
 
     let (input, attributes) = parse_attribute_list(input)?;
 
-    let (input, content) = parse_block_content(input)?;
+    Ok((input, (title, attributes)))
+}
 
+fn parse_block<'a>(input: &'a str) -> IResult<&'a str, Block<'a>> {
+    let (input, (title, attributes)) = parse_block_header(input)?;
+    let (input, content) = alt((
+        map(parse_list_content, BlockContent::List),
+        map(parse_section_content, BlockContent::Section),
+        map(parse_delimited_block_content, BlockContent::Delimited),
+        map(parse_undelimited_block_content, BlockContent::Undelimited),
+    ))
+    .parse(input)?;
     Ok((
         input,
         Block {
@@ -173,12 +86,6 @@ fn parse_attribute<'a>(input: &'a str) -> IResult<&'a str, Attribute<'a>> {
     Ok((input, Attribute { key, value }))
 }
 
-fn parse_block_content<'a>(
-    whitelist: (impl Fn(&'a str) -> IResult<&'a str, BlockContent<'a>>,),
-) -> impl Fn(&'a str) -> IResult<&'a str, BlockContent<'a>> {
-    |input: &'a str| alt(whitelist).parse(input)
-}
-
 fn parse_list_content<'a>(input: &'a str) -> IResult<&'a str, Vec<ListContent<'a>>> {
     todo!()
 }
@@ -194,15 +101,60 @@ fn parse_section_content<'a>(input: &'a str) -> IResult<&'a str, Vec<SectionCont
 fn parse_delimited_block_content<'a>(
     input: &'a str,
 ) -> IResult<&'a str, Vec<DelimitedBlockContent<'a>>> {
-    todo!()
+    many1(alt((
+        map(parse_delimited_subblocks, |block| {
+            DelimitedBlockContent::Block(block)
+        }),
+        map(parse_line, |line| DelimitedBlockContent::Text(line)),
+    )))
+    .parse(input)
 }
+
+fn parse_delimited_subblocks<'a>(input: &'a str) -> IResult<&'a str, Block<'a>> {
+    let (input, (title, attributes)) = parse_block_header(input)?;
+    let (input, content) = alt((
+        map(parse_list_content, BlockContent::List),
+        map(parse_section_content, BlockContent::Section),
+        map(parse_undelimited_block_content, BlockContent::Undelimited),
+    ))
+    .parse(input)?;
+    Ok((
+        input,
+        Block {
+            title,
+            attributes,
+            content,
+        },
+    ))
+}
+
 
 fn parse_undelimited_block_content<'a>(
     input: &'a str,
 ) -> IResult<&'a str, Vec<UndelimitedBlockContent<'a>>> {
-    map(alt((
+    many1(alt((
+        map(parse_undelimited_subblocks, |block| {
+            UndelimitedBlockContent::Block(block)
+        }),
+        map(parse_line, |line| UndelimitedBlockContent::Text(line)),
+    )))
+    .parse(input)
+}
+
+fn parse_undelimited_subblocks<'a>(input: &'a str) -> IResult<&'a str, Block<'a>> {
+    let (input, (title, attributes)) = parse_block_header(input)?;
+    let (input, content) = alt((
         map(parse_list_content, BlockContent::List),
         map(parse_section_content, BlockContent::Section),
         map(parse_delimited_block_content, BlockContent::Delimited),
-    )))
+    ))
+    .parse(input)?;
+    Ok((
+        input,
+        Block {
+            title,
+            attributes,
+            content,
+        },
+    ))
 }
