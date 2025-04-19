@@ -69,6 +69,13 @@ where
         })
     }
 
+    pub fn take_while_ref<P: Fn(&T::Item) -> bool>(&mut self, predicate: P) -> TakeWhileRef<T, P> {
+        TakeWhileRef {
+            inner: self,
+            predicate,
+        }
+    }
+
     pub fn error(&self, message: String) -> ParseError {
         ParseError {
             start: self.current_position(),
@@ -87,5 +94,35 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.step()
+    }
+}
+
+pub struct TakeWhileRef<'a, T: Iterator, P: Fn(&T::Item) -> bool> {
+    inner: &'a mut CheckpointIterator<T>,
+    predicate: P,
+}
+
+impl<'a, T, P> Iterator for TakeWhileRef<'a, T, P>
+where
+    T: Iterator,
+    P: Fn(&T::Item) -> bool,
+    T::Item: Clone,
+{
+    type Item = T::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.inner.next() {
+            Some(e) => {
+                if (self.predicate)(&e) {
+                    Some(e)
+                } else {
+                    self.inner
+                        .stack
+                        .push((self.inner.current_position(), vec![e]));
+                    None
+                }
+            }
+            None => None,
+        }
     }
 }

@@ -3,7 +3,7 @@ use http::Uri;
 use crate::{
     ast::{Author, DocumentHeader, Revision},
     parser::ParseError,
-    rewindable_iterator::CheckpointIterator,
+    checkpoint_iterator::CheckpointIterator,
 };
 
 use super::{
@@ -16,7 +16,7 @@ where
     T: Iterator<Item = char>,
 {
     fn parse_document_header(&mut self) -> Result<DocumentHeader, super::ParseError> {
-        let _ = self.by_ref().take_while(|c| c.is_whitespace() || *c == '=');
+        let _ = self.take_while_ref(|c| c.is_whitespace() || *c == '=');
         let title = Some(
             self.parse_line()
                 .expect("Parsing line for header should never return an error"),
@@ -41,9 +41,9 @@ where
             Ok(v) => v,
         };
 
-        let _ = self.by_ref().take_while(|c| c.is_whitespace() || *c == ',');
+        let _ = self.take_while_ref(|c| c.is_whitespace() || *c == ',');
         let date = self.parse_date().ok();
-        let _ = self.by_ref().take_while(|c| c.is_whitespace() || *c == ':');
+        let _ = self.take_while_ref(|c| c.is_whitespace() || *c == ':');
         let remark = self.parse_line().expect("Parsing line shouldn't ever fail");
         Ok(Revision {
             version,
@@ -59,23 +59,17 @@ where
 {
     fn parse_date(&mut self) -> Result<chrono::NaiveDate, super::ParseError> {
         let year = self
-            .by_ref()
-            .take(5)
-            .take_while(|c| c.is_numeric())
+            .take_while_ref(|c| c.is_numeric())
             .collect::<String>()
             .parse()
             .map_err(|e| self.error(format!("Error while parsing year: {e}")))?;
         let month = self
-            .by_ref()
-            .take(2)
-            .take_while(|c| c.is_numeric())
+            .take_while_ref(|c| c.is_numeric())
             .collect::<String>()
             .parse()
             .map_err(|e| self.error(format!("Error while parsing year: {e}")))?;
         let day = self
-            .by_ref()
-            .take(2)
-            .take_while(|c| c.is_numeric())
+            .take_while_ref(|c| c.is_numeric())
             .collect::<String>()
             .parse()
             .map_err(|e| self.error(format!("Error while parsing year: {e}")))?;
@@ -104,7 +98,7 @@ where
     T: Iterator<Item = char>,
 {
     fn parse_decimal(&mut self) -> Result<isize, super::ParseError> {
-        self.take_while(|e| e.is_numeric() || *e == '_')
+        self.take_while_ref(|e| e.is_numeric() || *e == '_')
             .filter(|e| e.is_numeric())
             .collect::<String>()
             .parse()
@@ -131,7 +125,7 @@ where
 {
     fn parse_author(&mut self) -> Result<Author, super::ParseError> {
         let first_name = String::from(
-            self.take_while(|i| !i.is_whitespace())
+            self.take_while_ref(|i| !i.is_whitespace())
                 .collect::<String>()
                 .trim(),
         );
@@ -141,7 +135,7 @@ where
         }
 
         let middle_name = match self.parse_url() {
-            Err(_) => Some(self.take_while(|i| !i.is_whitespace()).collect::<String>()),
+            Err(_) => Some(self.take_while_ref(|i| !i.is_whitespace()).collect::<String>()),
             Ok(v) => {
                 return Ok(Author {
                     first_name,
@@ -152,7 +146,7 @@ where
             }
         };
         let last_name = match self.parse_url() {
-            Err(_) => Some(self.take_while(|i| !i.is_whitespace()).collect::<String>()),
+            Err(_) => Some(self.take_while_ref(|i| !i.is_whitespace()).collect::<String>()),
             Ok(v) => {
                 return Ok(Author {
                     first_name,
@@ -188,7 +182,7 @@ where
     fn parse_url(&mut self) -> Result<Uri, super::ParseError> {
         let start_pos = self.push();
         match self
-            .take_while(|i| !i.is_alphanumeric() || "-._~:/?#[]@!$&'()*+,;%=".contains(*i))
+            .take_while_ref(|i| !i.is_alphanumeric() || "-._~:/?#[]@!$&'()*+,;%=".contains(*i))
             .collect::<String>()
             .parse()
         {
@@ -214,7 +208,7 @@ where
 {
     fn parse_line(&mut self) -> Result<String, super::ParseError> {
         Ok(self
-            .take_while(|i| !i.is_ascii_control())
+            .take_while_ref(|i| !i.is_ascii_control())
             .collect::<String>())
     }
 }

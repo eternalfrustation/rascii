@@ -41,8 +41,8 @@ pub struct Block {
     pub content: BlockContent,
 }
 
-#[derive(Debug, Clone)]
 // TODO: Make this an enum
+#[derive(Debug, Clone)]
 pub struct Attribute {
     pub key: String,
     pub value: String,
@@ -67,20 +67,20 @@ pub struct UnorderedListContent {
     pub text: String,
     pub sublist: Vec<ListContent>,
 }
-#[derive(Debug, Clone)]
 
+#[derive(Debug, Clone)]
 pub struct OrderedListContent {
     pub text: String,
     pub sublist: Vec<ListContent>,
 }
-#[derive(Debug, Clone)]
 
+#[derive(Debug, Clone)]
 pub enum SectionContent {
     Text(String),
     Block(Block),
 }
-#[derive(Debug, Clone)]
 
+#[derive(Debug, Clone)]
 pub enum DelimitedBlockContent {
     Text(String),
     Block(Block),
