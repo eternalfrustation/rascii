@@ -1,14 +1,14 @@
 use http::Uri;
 
 use crate::{
-    ast::{Author, DocumentHeader, Revision},
-    parser::ParseError,
+    ast::{Author, DocumentHeader, Revision, SectionHeading},
     checkpoint_iterator::CheckpointIterator,
+    parser::ParseError,
 };
 
 use super::{
-    AuthorParser, AuthorsParser, DateParser, DecimalParser, DocHeaderParser, LineParser,
-    RevisionLineParser, UriParser, VersionParser,
+    AuthorParser, AuthorsParser, DateParser, DecimalParser, DocHeaderParser, DocSectionHeading,
+    LineParser, RevisionLineParser, UriParser, VersionParser,
 };
 
 impl<T> DocHeaderParser for CheckpointIterator<T>
@@ -16,18 +16,37 @@ where
     T: Iterator<Item = char>,
 {
     fn parse_document_header(&mut self) -> Result<DocumentHeader, super::ParseError> {
-        let _ = self.take_while_ref(|c| c.is_whitespace() || *c == '=');
-        let title = Some(
-            self.parse_line()
-                .expect("Parsing line for header should never return an error"),
-        );
-        let authors = self.parse_authors()?;
-        let revision = self.parse_revision_line()?;
+        let title = self.opt_parse(Self::parse_section_heading);
+        let authors = self.opt_parse(Self::parse_authors).unwrap_or(Vec::new());
+        let revision = self.opt_parse(Self::parse_revision_line);
         Ok(DocumentHeader {
             title,
             authors,
             revision,
         })
+    }
+}
+
+impl<T> DocSectionHeading for CheckpointIterator<T>
+where
+    T: Iterator<Item = char>,
+{
+    fn parse_section_heading(&mut self) -> Result<SectionHeading, super::ParseError> {
+        // Skip all preceding whitespace from the start, count for consuming the iterator
+        // Without count, iterator won't advance
+        let whitespace_count = self.take_while_ref(|c| c.is_whitespace()).count();
+        log::info!("Skipping {whitespace_count} Whitespaces before section heading");
+        let level = self.take_while_ref(|c| *c == '=').count();
+        log::info!("Section Level {level}");
+        if level == 0 {
+            return Err(self.error("Expected '='".to_string()));
+        }
+        let space_count = self.take_while_ref(|c| *c == ' ').count();
+        if space_count == 0 {
+            return Err(self.error("Expected ' '".to_string()));
+        }
+        let text = self.parse_line()?;
+        Ok(SectionHeading { level, text })
     }
 }
 
@@ -112,7 +131,8 @@ where
 {
     fn parse_authors(&mut self) -> Result<Vec<Author>, super::ParseError> {
         let mut authors = Vec::new();
-        while let Ok(author) = self.parse_author() {
+        let mut current_line = CheckpointIterator::new(self.take_while(|c| !c.is_ascii_control()));
+        while let Ok(author) = current_line.parse_author() {
             authors.push(author)
         }
         Ok(authors)
@@ -124,8 +144,9 @@ where
     T: Iterator<Item = char>,
 {
     fn parse_author(&mut self) -> Result<Author, super::ParseError> {
+        self.take_while_ref(|i| i.is_whitespace());
         let first_name = String::from(
-            self.take_while_ref(|i| !i.is_whitespace())
+            self.take_while_ref(|i| i.is_alphanumeric())
                 .collect::<String>()
                 .trim(),
         );
@@ -135,7 +156,13 @@ where
         }
 
         let middle_name = match self.parse_url() {
-            Err(_) => Some(self.take_while_ref(|i| !i.is_whitespace()).collect::<String>()),
+            Err(e) => {
+                log::error!("{e:?}");
+                Some(
+                    self.take_while_ref(|i| i.is_alphanumeric())
+                        .collect::<String>(),
+                )
+            }
             Ok(v) => {
                 return Ok(Author {
                     first_name,
@@ -145,8 +172,11 @@ where
                 });
             }
         };
+
+        println!("{middle_name:?}");
+
         let last_name = match self.parse_url() {
-            Err(_) => Some(self.take_while_ref(|i| !i.is_whitespace()).collect::<String>()),
+            Err(_) => Some(self.take_while(|i| i.is_alphanumeric()).collect::<String>()),
             Ok(v) => {
                 return Ok(Author {
                     first_name,
@@ -182,7 +212,7 @@ where
     fn parse_url(&mut self) -> Result<Uri, super::ParseError> {
         let start_pos = self.push();
         match self
-            .take_while_ref(|i| !i.is_alphanumeric() || "-._~:/?#[]@!$&'()*+,;%=".contains(*i))
+            .take_while(|i| !i.is_alphanumeric() || "-._~:/?#[]@!$&'()*+,;%=".contains(*i))
             .collect::<String>()
             .parse()
         {
@@ -197,7 +227,11 @@ where
                     message: format!("URI Parsing Failed with error: {e}"),
                 });
             }
-            Ok(v) => Ok(v),
+            Ok(v) => {
+                self.drop()
+                    .expect("Drop executed before pop on checkpoint iterator");
+                Ok(v)
+            }
         }
     }
 }
@@ -208,7 +242,7 @@ where
 {
     fn parse_line(&mut self) -> Result<String, super::ParseError> {
         Ok(self
-            .take_while_ref(|i| !i.is_ascii_control())
+            .take_while(|i| !i.is_ascii_control())
             .collect::<String>())
     }
 }

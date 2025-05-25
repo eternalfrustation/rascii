@@ -9,9 +9,16 @@ pub struct Document {
 
 #[derive(Debug, Clone)]
 pub struct DocumentHeader {
-    pub title: Option<String>,
+    pub title: Option<SectionHeading>,
     pub authors: Vec<Author>,
-    pub revision: Revision,
+    pub revision: Option<Revision>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SectionHeading {
+    pub level: usize,
+    pub text: String,
+
 }
 
 #[derive(Debug, Clone)]

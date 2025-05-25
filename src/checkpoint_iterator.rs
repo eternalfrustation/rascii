@@ -1,4 +1,5 @@
-use std::collections::VecDeque;
+use std::fmt::Debug;
+use std::{collections::VecDeque, fmt::Display};
 
 use crate::parser::ParseError;
 
@@ -57,6 +58,32 @@ where
         Ok(last_pos)
     }
 
+    pub fn drop(&mut self) -> Result<usize, PopError> {
+        let (pos, _) = match self.stack.pop() {
+            Some(v) => v,
+            None => return Err(PopError::PopOnEmptyStack),
+        };
+        return Ok(pos);
+    }
+
+    pub fn opt_parse<V, E: std::fmt::Debug, F: FnOnce(&mut Self) -> Result<V, E>>(
+        &mut self,
+        f: F,
+    ) -> Option<V> {
+        self.push();
+        match f(self) {
+            Ok(v) => {
+                let _ = self.drop().expect("Expected a push before drop call");
+                Some(v)
+            }
+            Err(e) => {
+                log::info!("Could not parse heading for the document {e:?}");
+                let _ = self.pop().expect("Expected a push before pop call");
+                None
+            }
+        }
+    }
+
     pub fn step(&mut self) -> Option<T::Item> {
         self.buf.pop_front().or_else(|| {
             let item = self.inner.next();
@@ -106,23 +133,18 @@ impl<'a, T, P> Iterator for TakeWhileRef<'a, T, P>
 where
     T: Iterator,
     P: Fn(&T::Item) -> bool,
-    T::Item: Clone,
+    T::Item: Display + Debug + Clone,
 {
     type Item = T::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.inner.next() {
-            Some(e) => {
-                if (self.predicate)(&e) {
-                    Some(e)
-                } else {
-                    self.inner
-                        .stack
-                        .push((self.inner.current_position(), vec![e]));
-                    None
-                }
+        self.inner.next().and_then(|e| {
+            if (self.predicate)(&e) {
+                Some(e)
+            } else {
+                self.inner.buf.push_back(e);
+                None
             }
-            None => None,
-        }
+        })
     }
 }

@@ -1,7 +1,7 @@
 pub mod header;
 use http::Uri;
 
-use crate::ast::{Author, Document, DocumentHeader, Revision};
+use crate::ast::{Author, Document, DocumentHeader, Revision, SectionHeading};
 
 #[derive(Debug, Clone)]
 pub struct ParseError {
@@ -17,6 +17,11 @@ pub trait DocParser {
 pub trait DocHeaderParser {
     fn parse_document_header(&mut self) -> Result<DocumentHeader, ParseError>;
 }
+
+pub trait DocSectionHeading {
+    fn parse_section_heading(&mut self) -> Result<SectionHeading, ParseError>;
+}
+
 
 pub trait RevisionLineParser {
     fn parse_revision_line(&mut self) -> Result<Revision, ParseError>;
