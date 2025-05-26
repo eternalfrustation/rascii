@@ -25,7 +25,7 @@ pub struct SectionHeading {
 pub struct Author {
     pub first_name: String,
     pub middle_name: Option<String>,
-    pub last_name: Option<String>,
+    pub last_name: String,
     pub email: Option<Uri>,
 }
 

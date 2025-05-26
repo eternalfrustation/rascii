@@ -56,13 +56,20 @@ where
 {
     fn parse_revision_line(&mut self) -> Result<Revision, super::ParseError> {
         let version = match self.parse_version() {
-            Err(_) => vec![],
+            Err(_) => {
+                println!("Error while parsing version");
+                vec![]
+            }
             Ok(v) => v,
         };
 
-        let _ = self.take_while_ref(|c| c.is_whitespace() || *c == ',');
+        let _ = self
+            .take_while_ref(|c| c.is_whitespace() || *c == ',')
+            .collect::<String>();
         let date = self.parse_date().ok();
-        let _ = self.take_while_ref(|c| c.is_whitespace() || *c == ':');
+        let _ = self
+            .take_while_ref(|c| c.is_whitespace() || *c == ':')
+            .count();
         let remark = self.parse_line().expect("Parsing line shouldn't ever fail");
         Ok(Revision {
             version,
@@ -78,20 +85,25 @@ where
 {
     fn parse_date(&mut self) -> Result<chrono::NaiveDate, super::ParseError> {
         let year = self
-            .take_while_ref(|c| c.is_numeric())
+            .take_while_ref(|c| {
+                dbg!(c, c.is_ascii_digit());
+                c.is_ascii_digit()
+            })
             .collect::<String>()
             .parse()
             .map_err(|e| self.error(format!("Error while parsing year: {e}")))?;
+        self.take_while_ref(|v| *v == '-').count();
         let month = self
             .take_while_ref(|c| c.is_numeric())
             .collect::<String>()
             .parse()
-            .map_err(|e| self.error(format!("Error while parsing year: {e}")))?;
+            .map_err(|e| self.error(format!("Error while parsing month: {e}")))?;
+        self.take_while_ref(|v| *v == '-').count();
         let day = self
             .take_while_ref(|c| c.is_numeric())
             .collect::<String>()
             .parse()
-            .map_err(|e| self.error(format!("Error while parsing year: {e}")))?;
+            .map_err(|e| self.error(format!("Error while parsing day: {e}")))?;
         match chrono::NaiveDate::from_ymd_opt(year, month, day) {
             Some(v) => Ok(v),
             None => Err(self.error(String::from("Invalid date provided"))),
@@ -107,6 +119,7 @@ where
         let mut version = Vec::new();
         while let Ok(v) = self.parse_decimal() {
             version.push(v);
+            self.take_while_ref(|v| *v == '.').next();
         }
         Ok(version)
     }
@@ -133,7 +146,7 @@ where
         let mut authors = Vec::new();
         let mut current_line = CheckpointIterator::new(self.take_while(|c| !c.is_ascii_control()));
         while let Ok(author) = current_line.parse_author() {
-            authors.push(author)
+            authors.push(author.clone());
         }
         Ok(authors)
     }
@@ -144,48 +157,35 @@ where
     T: Iterator<Item = char>,
 {
     fn parse_author(&mut self) -> Result<Author, super::ParseError> {
-        self.take_while_ref(|i| i.is_whitespace());
-        let first_name = String::from(
-            self.take_while_ref(|i| i.is_alphanumeric())
-                .collect::<String>()
-                .trim(),
-        );
+        self.take_while_ref(|i| i.is_whitespace() || *i == ';')
+            .count();
+        let name: Vec<String> = self
+            .take_while_ref(|i| !(i.is_ascii_control() || *i == ';' || *i == '<'))
+            .collect::<String>()
+            .split_terminator(' ')
+            .map(|v| v.trim().to_string())
+            .collect();
 
-        if first_name.len() == 0 {
-            return Err(self.error("No Content in Author Line".to_string()));
+        if name.len() < 1 {
+            return Err(self.error("Expected to find author name".to_string()));
+        }
+        if name.len() < 2 {
+            return Err(self.error("Expected to find author's last name".to_string()));
         }
 
-        let middle_name = match self.parse_url() {
-            Err(e) => {
-                log::error!("{e:?}");
-                Some(
-                    self.take_while_ref(|i| i.is_alphanumeric())
-                        .collect::<String>(),
-                )
-            }
-            Ok(v) => {
-                return Ok(Author {
-                    first_name,
-                    middle_name: None,
-                    last_name: None,
-                    email: Some(v),
-                });
-            }
+        let first_name = name[0].clone();
+
+        let (middle_name, last_name) = if name.len() == 2 {
+            (None, name[1].clone())
+        } else {
+            (
+                Some(name[1].clone()),
+                name.last()
+                    .expect("Expected the name to have more than 2 words")
+                    .to_string(),
+            )
         };
 
-        println!("{middle_name:?}");
-
-        let last_name = match self.parse_url() {
-            Err(_) => Some(self.take_while(|i| i.is_alphanumeric()).collect::<String>()),
-            Ok(v) => {
-                return Ok(Author {
-                    first_name,
-                    middle_name: None,
-                    last_name: middle_name,
-                    email: Some(v),
-                });
-            }
-        };
         let email = if let Some('<') = self.next() {
             let email = Some(self.parse_url()?);
             if let Some('>') = self.next() {
@@ -212,7 +212,7 @@ where
     fn parse_url(&mut self) -> Result<Uri, super::ParseError> {
         let start_pos = self.push();
         match self
-            .take_while(|i| !i.is_alphanumeric() || "-._~:/?#[]@!$&'()*+,;%=".contains(*i))
+            .take_while_ref(|i| i.is_alphanumeric() || "-._~:/?#[]@!$&'()*+,;%=".contains(*i))
             .collect::<String>()
             .parse()
         {
