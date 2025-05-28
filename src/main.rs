@@ -1,7 +1,7 @@
 use std::{fs, io::Read};
 
 use checkpoint_iterator::CheckpointIterator;
-use parser::DocHeaderParser;
+use parser::traits::DocParser;
 
 pub mod ast;
 pub mod checkpoint_iterator;
@@ -16,6 +16,6 @@ fn main() {
         .expect("To be able to read the test file");
     println!(
         "{:#?}",
-        CheckpointIterator::new(buf.chars()).parse_document_header()
+        CheckpointIterator::new(buf.chars()).parse_document()
     );
 }

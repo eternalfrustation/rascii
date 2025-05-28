@@ -6,7 +6,7 @@ use crate::{
     parser::ParseError,
 };
 
-use super::{
+use super::traits::header::{
     AuthorParser, AuthorsParser, DateParser, DecimalParser, DocHeaderParser, DocSectionHeading,
     LineParser, RevisionLineParser, UriParser, VersionParser,
 };
@@ -63,10 +63,12 @@ where
             Ok(v) => v,
         };
 
-        let _ = self
-            .take_while_ref(|c| c.is_whitespace() || *c == ',')
-            .collect::<String>();
-        let date = self.parse_date().ok();
+        let date = self.opt_parse(|state| {
+            let _ = state
+                .take_while_ref(|c| c.is_whitespace() || *c == ',')
+                .collect::<String>();
+            state.parse_date()
+        });
         let _ = self
             .take_while_ref(|c| c.is_whitespace() || *c == ':')
             .count();
@@ -85,10 +87,7 @@ where
 {
     fn parse_date(&mut self) -> Result<chrono::NaiveDate, super::ParseError> {
         let year = self
-            .take_while_ref(|c| {
-                dbg!(c, c.is_ascii_digit());
-                c.is_ascii_digit()
-            })
+            .take_while_ref(|c| c.is_ascii_digit())
             .collect::<String>()
             .parse()
             .map_err(|e| self.error(format!("Error while parsing year: {e}")))?;
