@@ -18,7 +18,6 @@ pub struct DocumentHeader {
 pub struct SectionHeading {
     pub level: usize,
     pub text: String,
-
 }
 
 #[derive(Debug, Clone)]
@@ -43,7 +42,7 @@ pub struct DocumentContent {
 
 #[derive(Debug, Clone)]
 pub struct Block {
-    pub title: String,
+    pub heading: SectionHeading,
     pub attributes: Vec<Attribute>,
     pub content: BlockContent,
 }
@@ -52,7 +51,7 @@ pub struct Block {
 #[derive(Debug, Clone)]
 pub struct Attribute {
     pub key: String,
-    pub value: String,
+    pub value: Option<String>,
 }
 
 #[derive(Debug, Clone)]

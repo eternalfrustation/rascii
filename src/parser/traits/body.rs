@@ -11,10 +11,18 @@ pub trait DocContentParser {
 
 pub trait DocBlockParser {
     fn parse_block(&mut self) -> Result<Block, ParseError>;
+    fn parse_section_block(&mut self) -> Result<Block, ParseError>;
+    fn parse_list_block(&mut self) -> Result<Block, ParseError>;
+    fn parse_delimited_block(&mut self) -> Result<Block, ParseError>;
+    fn parse_undelimited_block(&mut self) -> Result<Block, ParseError>;
 }
 
 pub trait DocAttributeParser {
     fn parse_attribute(&mut self) -> Result<Attribute, ParseError>;
+}
+
+pub trait DocAttributesParser {
+    fn parse_attributes(&mut self) -> Result<Vec<Attribute>, ParseError>;
 }
 
 pub trait DocBlockContentParser {
@@ -26,7 +34,7 @@ pub trait DocListContentParser {
 }
 
 pub trait DocSectionContentParser {
-    fn parse_section_content(&mut self) -> Result<SectionContent, ParseError>;
+    fn parse_section_content(&mut self) -> Result<Vec<SectionContent>, ParseError>;
 }
 
 pub trait DocDelimitedBlockContentParser {
@@ -34,8 +42,5 @@ pub trait DocDelimitedBlockContentParser {
 }
 
 pub trait DocUndelimitedBlockContentParser {
-    fn parse_undelimited_block_content(
-        &mut self,
-    ) -> Result<UndelimitedBlockContent, ParseError>;
+    fn parse_undelimited_block_content(&mut self) -> Result<UndelimitedBlockContent, ParseError>;
 }
-
